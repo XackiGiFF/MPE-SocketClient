@@ -31,7 +31,7 @@ $port = 12345;
 echo "Enter your nickname: "; // Todo: make json Client <=> Server data and add auth
 $username = trim(fgets(STDIN));
 
-echo "Authenticating you as {$username}...";
+echo "Authenticating you as {$username}...\n";
 
 // Create a client socket
 $socket = stream_socket_client("tcp://$address:$port", $errno, $errstr);
@@ -39,9 +39,11 @@ if (!$socket) {
     die("Error: $errstr ($errno)n");
 }
 
-echo "Connected to server $address:$port...\n";
+$auth = [ 'username' => $username ];
 
-echo "Enter message (or 'exit' to quit, 'stop' to stop the server): ";
+fwrite($socket, json_encode($auth)); // Send message to the server
+
+echo "Connected to server $address:$port...\n";
 
 // Infinite loop for sending and receiving messages
 while (true) {
@@ -55,26 +57,34 @@ while (true) {
     if (stream_select($read, $write, $except, 0) > 0) {
         // If there is data from the server
         if (in_array($socket, $read)) {
-            $response = fread($socket, 1024);
-            if ($response === false || $response === '') {
+            $response = '';
+            // Read data
+            while ($buffer = fread($socket, 1024)) {
+                $response .= $buffer; // Stack
+                if (strlen($buffer) < 1024) {
+                    break; // If end
+                }
+            }
+                // Проверяем, что $response не null и является строкой
+                echo json_decode($response); // Output the server's response
+
+            if (!$response || $response == '') {
                 echo "Server closed the connection.\n";
                 break; // Exit the loop if the server closed the connection
             }
-            echo trim($response) . " "; // Output the server's response
         }
 
         // If there is input from the user
         if (in_array(STDIN, $read)) {
-            echo "Enter message (or 'exit' to quit, 'stop' to stop the server): ";
-            $message = trim(fgets(STDIN));
+            $cmd = [ 'message' => trim(fgets(STDIN)) ];
 
-            fwrite($socket, $message . "\n"); // Send message to the server
+            fwrite($socket, json_encode($cmd)); // Send message to the server
 
-            if ($message === 'exit') {
+            if ($cmd['message'] === 'exit') {
                 break; // Exit the loop on 'exit' command
             }
 
-            if ($message === 'stop') {
+            if ($cmd['message'] === 'stop') {
                 echo "Command 'stop' sent. Waiting for the server to finish...\n";
                 break; // Exit the loop on 'stop' command
             }
