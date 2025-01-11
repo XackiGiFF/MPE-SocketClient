@@ -60,8 +60,7 @@ while (true) {
                 echo "Server closed the connection.\n";
                 break; // Exit the loop if the server closed the connection
             }
-            echo "\n" . trim($response) . "\n"; // Output the server's response
-            echo "Enter message (or 'exit' to quit, 'stop' to stop the server): ";
+            echo trim($response) . " "; // Output the server's response
         }
 
         // If there is input from the user
